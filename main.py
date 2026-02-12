@@ -3,10 +3,8 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QThread
 from mode_widget import ModeCircleWidget
 from SelectMode import SelectMode
-from modes import mode_modules  # import các mode, trong đó có mode01.py, mode02.py
+from modes import mode_modules  # import tất cả các mode từ modes.py
 from stdin_reader import StdinReaderThread
-import mode01
-import mode02
 
 class ModeRunnerThread(QThread):
     def __init__(self, mode_name):
@@ -16,31 +14,44 @@ class ModeRunnerThread(QThread):
         self.handler = None
 
     def run(self):
-        if self.mode_name == 1:
-            self.handler = mode01.Mode01Handler()
-            self.handler.start()
-            while self._running:
-                self.msleep(100)
-        elif self.mode_name == 2:
-            self.handler = mode02.Mode02Handler()
-            self.handler.start()
-            while self._running:
-                self.msleep(100)
-        elif self.mode_name in mode_modules:
-            try:
-                mode_modules[self.mode_name].run_mode()
+        if self.mode_name in mode_modules:
+            mode_module = mode_modules[self.mode_name]
+            # Kiểm tra xem module có class Handler không (theo quy ước là ModeXXHandler)
+            handler_class_name = None
+            # Tìm class handler trong module
+            for attr_name in dir(mode_module):
+                if attr_name.endswith("Handler"):
+                    handler_class_name = attr_name
+                    break
+            if handler_class_name:
+                handler_class = getattr(mode_module, handler_class_name)
+                self.handler = handler_class()
+                self.handler.start()
                 while self._running:
                     self.msleep(100)
-            except Exception as e:
-                print(f"Error running mode {self.mode_name}: {e}")
+            else:
+                # Nếu không có handler, gọi run_mode() nếu có
+                if hasattr(mode_module, "run_mode"):
+                    try:
+                        mode_module.run_mode()
+                        while self._running:
+                            self.msleep(100)
+                    except Exception as e:
+                        print(f"Error running mode {self.mode_name}: {e}")
+                else:
+                    print(f"Mode {self.mode_name} không có handler hoặc run_mode để chạy")
+        else:
+            print(f"Mode {self.mode_name} không tồn tại trong mode_modules")
 
     def stop(self):
         self._running = False
         if self.handler:
             self.handler.stop()
             self.handler = None
-        elif self.mode_name in mode_modules and hasattr(mode_modules[self.mode_name], "disable_mode"):
-            mode_modules[self.mode_name].disable_mode()
+        elif self.mode_name in mode_modules:
+            mode_module = mode_modules[self.mode_name]
+            if hasattr(mode_module, "disable_mode"):
+                mode_module.disable_mode()
 
     def send_input(self, XXX, YYY, Z, V):
         if self.handler:
@@ -90,8 +101,10 @@ if __name__ == "__main__":
             print(f"Circle shown - mode selected: {mode}")
             w.setActiveMode(mode)
             selected_mode = mode
-            if selected_mode in mode_modules or selected_mode in (1, 2):
+            if selected_mode in mode_modules:
                 start_mode_thread(selected_mode)
+            else:
+                print(f"Mode {selected_mode} không tồn tại trong mode_modules")
         else:
             w.hide()
             print("Circle hidden")
