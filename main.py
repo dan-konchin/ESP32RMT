@@ -150,7 +150,7 @@ if __name__ == "__main__":
 
     stdin_thread = StdinReaderThread()
 
-    def on_stdin_data(XXX, YYY, Z, V):
+    def on_rp_data(XXX, YYY, Z, V):
         global last_V, last_XXX, last_YYY, selected_mode, temp_selected_mode
 
         if V == 1:
@@ -175,10 +175,10 @@ if __name__ == "__main__":
                 if temp_selected_mode is not None:
                     if temp_selected_mode == 7:
                         print("Phát hiện mode 07, mở bàn phím ảo")
-                        open_virtual_keyboard()
                         if 0 in mode_modules:
                             switch_mode(0)
                             selected_mode = 0
+                            open_virtual_keyboard()
                         else:
                             print("Mode 00 không tồn tại")
                     else:
@@ -207,7 +207,7 @@ if __name__ == "__main__":
 
         print_mode_thread_status()
 
-    stdin_thread.data_ready.connect(on_stdin_data)
+    stdin_thread.data_ready.connect(on_rp_data)
     stdin_thread.start()
 
     sys.exit(app.exec_())
