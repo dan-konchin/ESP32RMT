@@ -1,0 +1,5 @@
+pystray
+Pillow
+PyQt5
+stdin_reader
+pyautogui
